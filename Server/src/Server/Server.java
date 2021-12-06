@@ -10,6 +10,9 @@ import Server.Repository.JdbcDao;
 
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.sql.Date;
+import java.sql.Timestamp;
+import java.util.Calendar;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
@@ -103,32 +106,41 @@ public class Server {
         private String requestAndAddingUser(Connection connection) {
             while (true) {
                 try {
-                    //посылаем клиенту сообщение-запрос имени
-                    connection.send(new Message(MessageType.REQUEST_NAME_USER));// сервер посылает клиенту сообщение о запросе имени
-                    Message responseMessage = connection.receive();// в ответ получает сообщение от клиента
-                    String userName = responseMessage.getTextMessage();
-                    //получили ответ с именем и проверяем не занято ли это имя другим клиентом
-                    if (responseMessage.getTypeMessage() == MessageType.USER_NAME && userName != null && !userName.isEmpty() && !model.getAllUsersMultiChat().containsKey(userName)) {
-                        //добавляем имя в мапу
-                        model.addUser(userName, connection);
-                        //Добавляем лог в БД
-                        JdbcDao.Instance.insertNewLog(MessageType.NAME_ACCEPTED, userName);
-                        Set<String> listUsers = new HashSet<>();
-                        for (Map.Entry<String, Connection> users : model.getAllUsersMultiChat().entrySet()) {
-                            listUsers.add(users.getKey());
+                    connection.send(new Message(MessageType.REQUEST_NAME_USER));
+                    Message responseMessage = connection.receive();
+                    var message = responseMessage.getTextMessage().split(";");
+                    String userName = message[0];
+                    String password = message[1];
+
+                    if(responseMessage.getTypeMessage() == MessageType.VERIFY_USER) {
+                        if(!JdbcDao.Instance.checkUserAuth(userName, password)){
+                            connection.send(new Message(MessageType.USER_INVALID));
                         }
-                        //отправляем клиенту множетство имен всех уже подключившихся пользователей
-                        connection.send(new Message(MessageType.NAME_ACCEPTED, listUsers));// отправляет клиенту что имя принято
-                        //отправляем всем клиентам сообщение о новом пользователе
-                        sendMessageAllUsers(new Message(MessageType.USER_ADDED, userName));
-                        return userName;
+                        else {
+                            model.addUser(userName, connection);
+                            Set<String> listUsers = new HashSet<>();
+                            for (Map.Entry<String, Connection> users : model.getAllUsersMultiChat().entrySet()) {
+                                listUsers.add(users.getKey());
+                            }
+                            connection.send(new Message(MessageType.NAME_ACCEPTED, listUsers));
+                            connection.send(new Message(MessageType.USER_ADDED, userName));
+                            JdbcDao.Instance.insertNewLog(Action.NewConnection, "Подключился новый пользователь: " + userName + " с удаленным хостом " + connection.Port());
+                            JdbcDao.Instance.updateUserData(new Timestamp(Calendar.getInstance().getTime().getTime()), connection.Port(), userName);
+                            return userName;
+                        }
                     }
-                    //если такое имя уже занято отправляем сообщение клиенту, что имя используется
-                    else {
-                        connection.send(new Message(MessageType.NAME_USED));
-                        //Добавляем лог.. можешь создать какие-то еще типы и занести их в БД и MessageType...
-                        JdbcDao.Instance.insertNewLog(MessageType.NAME_USED, userName);
+
+                    if(responseMessage.getTypeMessage() == MessageType.REG_USER){
+                        if(JdbcDao.Instance.isUserExists(userName)){
+                            connection.send(new Message(MessageType.USER_ALREADY_EXISTS));
+                        }
+                        else {
+                            JdbcDao.Instance.insertNewUser(userName, password);
+                            JdbcDao.Instance.insertNewLog(Action.NewUser, "Зарегистрирован новый пользователь: " + userName);
+                            connection.send(new Message(MessageType.REG_USER));
+                        }
                     }
+
                 } catch (Exception e) {
                     gui.refreshDialogWindowServer("Возникла ошибка при запросе и добавлении нового пользователя\n");
                 }
@@ -143,6 +155,7 @@ public class Server {
                     //приняли сообщение от клиента, если тип сообщения TEXT_MESSAGE то пересылаем его всем пользователям
                     if (message.getTypeMessage() == MessageType.TEXT_MESSAGE) {// проверяет его тип
                         String textMessage = String.format("%s: %s\n", userName, message.getTextMessage());
+                        JdbcDao.Instance.insertNewLog(Action.NewMessage, "Пользователь " + userName + " отправил сообщение: " + message.getTextMessage());
                         sendMessageAllUsers(new Message(MessageType.TEXT_MESSAGE, textMessage)); // рассылает все это сообщене
                     }
                     //если тип сообщения DISABLE_USER, то рассылаем всем пользователям, что данный пользователь покинул чат,
@@ -150,6 +163,8 @@ public class Server {
                     if (message.getTypeMessage() == MessageType.DISABLE_USER) {// если пользователь хочет отключится от чата
                         sendMessageAllUsers(new Message(MessageType.REMOVED_USER, userName));// рассылается сообщение об этом
                         model.removeUser(userName);// пользователь удаляется
+                        JdbcDao.Instance.updateUserDisconnection(new Timestamp(Calendar.getInstance().getTime().getTime()), userName);
+                        JdbcDao.Instance.insertNewLog(Action.NewInformation, "Пользователь " + userName + " с удаленным хостом " + connection.Port() +  " отключился.");
                         connection.close();// закрываются все потоки записи и чтения, а так же сокетного соединения
                         gui.refreshDialogWindowServer(String.format("Пользователь с удаленным доступом %s отключился.\n", socket.getRemoteSocketAddress()));
                         break;

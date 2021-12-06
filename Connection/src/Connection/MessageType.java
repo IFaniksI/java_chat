@@ -11,7 +11,12 @@ public enum MessageType {
     NAME_USED(5),
     USER_ADDED(6),
     DISABLE_USER(7),
-    REMOVED_USER(8);
+    REMOVED_USER(8),
+    VERIFY_USER(9),
+    USER_ALREADY_EXISTS(10),
+    USER_AUTH(11),
+    REG_USER(12),
+    USER_INVALID(13);
 
     private final int value;
     MessageType(int value) {

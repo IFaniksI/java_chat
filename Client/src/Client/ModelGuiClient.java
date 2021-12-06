@@ -12,6 +12,8 @@ public class ModelGuiClient {
     }
 
     protected void addUser(String nameUser) {
+        if(users == null) users = new HashSet<>();
+
         users.add(nameUser);
     }
 

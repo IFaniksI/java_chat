@@ -3,12 +3,17 @@
 
 package Server;
 
+import Server.Repository.JdbcDao;
+
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.util.Date;
 
 
 public class ViewGuiServer {
@@ -16,6 +21,7 @@ public class ViewGuiServer {
     private JTextArea dialogWindow = new JTextArea(10, 40);
     private JButton buttonStartServer = new JButton("Запустить сервер");
     private JButton buttonStopServer = new JButton("Остановить сервер");
+    private JButton openMenu = new JButton("Открыть меню");
     private JPanel panelButtons = new JPanel();
     private final Server server;
 
@@ -30,6 +36,7 @@ public class ViewGuiServer {
         frame.add(new JScrollPane(dialogWindow), BorderLayout.CENTER);
         panelButtons.add(buttonStartServer);
         panelButtons.add(buttonStopServer);
+        panelButtons.add(openMenu);
         frame.add(panelButtons, BorderLayout.SOUTH);
         frame.pack();
         frame.setLocationRelativeTo(null); // при запуске отображает окно по центру экрана
@@ -57,6 +64,31 @@ public class ViewGuiServer {
                 server.stopServer();
             }
         });
+
+        openMenu.addActionListener(e -> sendOptionFrame());
+    }
+
+    protected void sendOptionFrame() {
+        JButton createReport = new JButton("Выгрузить отчет");
+
+        createReport.addActionListener(e -> {
+            FileWriter myWriter = null;
+            try {
+                var path = new Date().getTime() + "_report.txt";
+                myWriter = new FileWriter(path);
+                myWriter.write(JdbcDao.Instance.fetchLogs());
+                myWriter.close();
+                JOptionPane.showMessageDialog(null, "Создан новый отчет: " + path, "Меню", JOptionPane.PLAIN_MESSAGE);
+            } catch (IOException ex) {
+                ex.printStackTrace();
+            }
+        });
+
+        Object[] message = {
+                createReport,
+        };
+
+        JOptionPane.showMessageDialog(null, message, "Меню", JOptionPane.PLAIN_MESSAGE);
     }
 
     //метод который добавляет в текстовое окно новое сообщение

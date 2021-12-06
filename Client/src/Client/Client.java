@@ -2,12 +2,13 @@ package Client;
 
 import Connection.*;
 
+import java.io.Console;
 import java.io.IOException;
 import java.net.Socket;
 
 public class Client {
-    private Connection connection;
-    private static ModelGuiClient model;
+    public Connection connection;
+    public static ModelGuiClient model;
     private static ViewGuiClient gui;
     private volatile boolean isConnect = false; //флаг отобаржающий состояние подключения клиента  серверу
 
@@ -34,7 +35,7 @@ public class Client {
         }
     }
 
-    //метод подключения клиента серверу
+    //метод подключения клиента  серверу
     protected void connectToServer() {
         //если клиент не подключен  сервере то..
         if (!isConnect) {
@@ -64,21 +65,17 @@ public class Client {
                 Message message = connection.receive();
                 //приняли от сервера сообщение, если это запрос имени, то вызываем окна ввода имени, отправляем на сервер имя
                 if (message.getTypeMessage() == MessageType.REQUEST_NAME_USER) {
-                    String nameUser = gui.getNameUser();
-                    connection.send(new Message(MessageType.USER_NAME, nameUser));
+                    if(gui.auth()){
+                        gui.addMessage("Сервисное сообщение: ваше имя принято!\n");
+                        model.setUsers(message.getListUsers());
+                        break;
+                    }
                 }
-                //если сообщение - имя уже используется, выводим соответствующее оуно с ошибой, повторяем ввод имени
-                if (message.getTypeMessage() == MessageType.NAME_USED) {
-                    gui.errorDialogWindow("Данное имя уже используется, введите другое");
-                    String nameUser = gui.getNameUser();
-                    connection.send(new Message(MessageType.USER_NAME, nameUser));
+
+                if(message.getTypeMessage() == MessageType.REG_USER){
+                    gui.errorDialogWindow("Пользователь зарегистрирован");
                 }
-                //если имя принято, получаем множество всех подключившихся пользователей, выходим из цикла
-                if (message.getTypeMessage() == MessageType.NAME_ACCEPTED) {
-                    gui.addMessage("Сервисное сообщение: ваше имя принято!\n");
-                    model.setUsers(message.getListUsers());
-                    break;
-                }
+
             } catch (Exception e) {
                 e.printStackTrace();
                 gui.errorDialogWindow("Произошла ошибка при регистрации имени. Попробуйте переподключиться");
@@ -103,7 +100,7 @@ public class Client {
         }
     }
 
-    //метод принимающий с сервера сообщение от других клиентов
+    //метод принимающий с сервера собщение от других клиентов
     protected void receiveMessageFromServer() {
         while (isConnect) {
             try {
@@ -125,6 +122,7 @@ public class Client {
                     gui.addMessage(String.format("Сервисное сообщение: пользователь %s покинул чат.\n", message.getTextMessage()));
                 }
             } catch (Exception e) {
+                e.printStackTrace();
                 gui.errorDialogWindow("Ошибка при приеме сообщения от сервера.");
                 setConnect(false);
                 gui.refreshListUsers(model.getUsers());

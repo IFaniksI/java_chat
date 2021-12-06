@@ -1,11 +1,15 @@
 package Client;
 
+import Connection.Message;
+import Connection.MessageType;
+
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
+import java.io.IOException;
 import java.util.Set;
 
 public class ViewGuiClient {
@@ -114,13 +118,77 @@ public class ViewGuiClient {
         }
     }
 
+    protected void reg() throws IOException, ClassNotFoundException {
+        JTextField username = new JTextField();
+        JTextField password = new JPasswordField();
+        JTextField password1 = new JPasswordField();
+        Object[] message = {
+                "Имя пользователя:", username,
+                "Пароль:", password,
+                "Повторите пароль:", password1,
+        };
+
+
+        int option = JOptionPane.showConfirmDialog(null, message, "Регистрация", JOptionPane.OK_CANCEL_OPTION);
+        if (option == JOptionPane.OK_OPTION) {
+
+            if(!password.getText().equals(password1.getText())){
+                JOptionPane.showMessageDialog(
+                        frame, "Пароли не совпадают!", "Ошибка", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+
+            client.connection.send(new Message(MessageType.REG_USER, username.getText() + ";" + password.getText()));
+            Message msg = client.connection.receive();
+
+            if (msg.getTypeMessage() == MessageType.USER_ALREADY_EXISTS) {
+                JOptionPane.showMessageDialog(
+                        frame, "Такой пользователь уже существует!", "Ошибка", JOptionPane.ERROR_MESSAGE);
+            }
+            else {
+                JOptionPane.showMessageDialog(
+                        frame, "Пользователь зарегистрирован!", "Регистрация", JOptionPane.PLAIN_MESSAGE);
+            }
+        }
+    }
+
     //вызывает окна для ввода имени пользователя
-    protected String getNameUser() {
-        return JOptionPane.showInputDialog(
-                frame, "Введите имя пользователя:",
-                "Ввод имени пользователя",
-                JOptionPane.QUESTION_MESSAGE
-        );
+    protected boolean auth() throws IOException, ClassNotFoundException {
+        JTextField username = new JTextField();
+        JTextField password = new JPasswordField();
+        JButton registration = new JButton("Регистрация");
+        Object[] message = {
+                "Имя пользователя:", username,
+                "Пароль:", password,
+                "Нет аккаунта?", registration
+        };
+
+        registration.addActionListener(e -> {
+            try {
+                reg();
+            } catch (IOException | ClassNotFoundException ex) {
+                ex.printStackTrace();
+            }
+        });
+
+        int option = JOptionPane.showConfirmDialog(null, message, "Вход в аккаунт", JOptionPane.OK_CANCEL_OPTION);
+        if (option == JOptionPane.OK_OPTION) {
+            client.connection.send(new Message(MessageType.VERIFY_USER, username.getText() + ";" + password.getText()));
+            Message msg = client.connection.receive();
+            if (msg.getTypeMessage() == MessageType.USER_INVALID) {
+                JOptionPane.showMessageDialog(
+                        frame, "Неверный логин или пароль!", "Ошибка", JOptionPane.ERROR_MESSAGE);
+                return false;
+            }
+            else {
+                return true;
+            }
+
+        } else {
+            JOptionPane.showMessageDialog(
+                    frame, "Необходимо произвести авторизацию!", "Ошибка", JOptionPane.ERROR_MESSAGE);
+            return false;
+        }
     }
 
     //вызывает окно ошибки с заданным текстом

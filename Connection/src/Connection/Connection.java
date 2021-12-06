@@ -33,6 +33,10 @@ public class Connection implements Closeable {
         }
     }
 
+    public int Port(){
+        return socket.getPort();
+    }
+
     //метод, зарывающий потоки чтения, записи и сокет
     @Override
     public void close() throws IOException {
