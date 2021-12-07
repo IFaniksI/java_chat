@@ -11,7 +11,6 @@ public class Message implements Serializable {
     public Message(MessageType typeMessage, String textMessage) {
         this.textMessage = textMessage;
         this.typeMessage = typeMessage;
-        this.listUsers = null;
     }
 
     public Message(MessageType typeMessage, Set<String> listUsers) {
@@ -23,7 +22,6 @@ public class Message implements Serializable {
     public Message(MessageType typeMessage) {
         this.typeMessage = typeMessage;
         this.textMessage = null;
-        this.listUsers = null;
     }
 
     public MessageType getTypeMessage() {

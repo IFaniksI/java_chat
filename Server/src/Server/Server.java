@@ -123,7 +123,7 @@ public class Server {
                                 listUsers.add(users.getKey());
                             }
                             connection.send(new Message(MessageType.NAME_ACCEPTED, listUsers));
-                            connection.send(new Message(MessageType.USER_ADDED, userName));
+                            sendMessageAllUsers(new Message(MessageType.USER_ADDED, userName));
                             JdbcDao.Instance.insertNewLog(Action.NewConnection, "Подключился новый пользователь: " + userName + " с удаленным хостом " + connection.Port());
                             JdbcDao.Instance.updateUserData(new Timestamp(Calendar.getInstance().getTime().getTime()), connection.Port(), userName);
                             return userName;

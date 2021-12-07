@@ -181,6 +181,7 @@ public class ViewGuiClient {
                 return false;
             }
             else {
+                Client.model.setUsers(msg.getListUsers());
                 return true;
             }
 

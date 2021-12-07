@@ -67,9 +67,13 @@ public class Client {
                 if (message.getTypeMessage() == MessageType.REQUEST_NAME_USER) {
                     if(gui.auth()){
                         gui.addMessage("Сервисное сообщение: ваше имя принято!\n");
-                        model.setUsers(message.getListUsers());
                         break;
                     }
+                }
+
+                if (message.getTypeMessage() == MessageType.NAME_ACCEPTED) {
+                    model.setUsers(message.getListUsers());
+                    break;
                 }
 
                 if(message.getTypeMessage() == MessageType.REG_USER){
